@@ -18,7 +18,7 @@ function init() {
 
   // Parse a GEXF encoded file to fill the graph
   // (requires "sigma.parseGexf.js" to be included)
-  sigInst.parseGexf('graph.xml');
+  sigInst.parseGexf('cached_graph.xml');
 
   // Draw the graph :
   sigInst.draw();
