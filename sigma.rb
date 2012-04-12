@@ -16,7 +16,7 @@ def create_graph
   graph_exists = neo.get_node_properties(1)
   return if graph_exists && graph_exists['name']
 
-  names = 200.times.collect{|x| generate_text}
+  names = 500.times.collect{|x| generate_text}
   clusters = 5.times.collect{|x| {:r => rand(256),
                                   :g => rand(256),
                                   :b => rand(256)} }
@@ -24,7 +24,7 @@ def create_graph
   names.each_index do |n|
     cluster = clusters[n % clusters.size]
     commands << [:create_node, {:name => names[n], 
-                                :size => 15.0 + rand(10.0), 
+                                :size => 5.0 + rand(20.0), 
                                 :r => cluster[:r],
                                 :g => cluster[:g],
                                 :b => cluster[:b],
@@ -33,13 +33,27 @@ def create_graph
                                  }]
   end
  
-  names.each_index do |x| 
-    commands << [:add_node_to_index, "nodes_index", "type", "User", "{#{x}}"]
-    follows = names.size.times.map{|y| y}
-    follows.delete_at(x)
-    follows.sample(rand(10)).each do |f|
-      commands << [:create_relationship, "follows", "{#{x}}", "{#{f}}"]    
+  names.each_index do |from| 
+    commands << [:add_node_to_index, "nodes_index", "type", "User", "{#{from}}"]
+    connected = []
+
+    # create clustered relationships
+    members = 20.times.collect{|x| x * 10 + (from % clusters.size)}
+    members.delete(from)
+    rels = 3
+    rels.times do |x|
+      to = members[x]
+      connected << to
+      commands << [:create_relationship, "follows", "{#{from}}", "{#{to}}"]  unless to == from
+    end    
+
+    # create random relationships
+    rels = 3
+    rels.times do |x|
+      to = rand(names.size)
+      commands << [:create_relationship, "follows", "{#{from}}", "{#{to}}"] unless (to == from) || connected.include?(to)
     end
+
   end
 
   batch_result = neo.batch *commands
@@ -47,18 +61,22 @@ end
 
 def nodes
   neo = Neography::Rest.new
-  cypher_query =  " START n = node:nodes_index(type='User')"
-  cypher_query << " RETURN ID(n), n"
+  cypher_query =  " START node = node:nodes_index(type='User')"
+  cypher_query << " RETURN ID(node), node"
   neo.execute_query(cypher_query)["data"].collect{|n| {"id" => n[0]}.merge(n[1]["data"])}
 end  
 
-get '/follows' do
-  follower_matrix.map{|fm| {"name" => fm[0], "follows" => fm[1][1..(fm[1].size - 2)].split(", ")} }.to_json
+def edges
+  neo = Neography::Rest.new
+  cypher_query =  " START source = node:nodes_index(type='User')"
+  cypher_query << " MATCH source -[rel]-> target"
+  cypher_query << " RETURN ID(rel), ID(source), ID(target)"
+  neo.execute_query(cypher_query)["data"].collect{|n| {"id" => n[0], "source" => n[1], "target" => n[2]} }
 end
 
 get '/graph.xml' do
   neo = Neography::Rest.new
   @nodes = nodes  
-  puts @nodes.inspect   
+  @edges = edges
   builder :graph
 end
