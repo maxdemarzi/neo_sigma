@@ -10,12 +10,13 @@ Follow along on {Using Sigma.js with Neo4j}[http://wp.me/p26jdv-dy]
   cd neo_sigma
   bundle install
   rake neo4j:install
-  
+  rake neo4j:start
+  rake neo4j:create
   rackup
   
 Then visit http://localhost:9292/index.html to see the examples.
 
-See an example running on heroku at {http://neo_sigma.herokuapp.com/index.html}[http://neo_sigma.herokuapp.com/index.html]
+See an example running on heroku at {http://neosigma.herokuapp.com/index.html}[http://neosigma.herokuapp.com/index.html]
 
 === Links
 
